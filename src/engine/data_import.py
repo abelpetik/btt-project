@@ -52,7 +52,7 @@ for loc, unit in enumerate(new_df["2"]):
         unit_location.append(loc)
 print(unit_location)
 
-#Mértékegységekhez tartozó adatpárok arraybe, majd dictionarybe tevése, végül hozzácsatolás az oszlop Patient adatokat tartalmazó dictionaryhoz
+#Mértékegységekhez tartozó adatpárok arraybe, majd dictionarybe tevése, végül hozzácsatolás a Patient adatokat tartalmazó dictionary listához
 #Reported Waveform data
 a = 0
 j = 1
@@ -127,6 +127,6 @@ for i in range(2, df_shape[1], 2):
 print(list_of_dicts[3].keys())
 # print(list_of_dicts[3]['Pupil Waveform'])
 
-#El van mentve az összes adat array+dictionary-be, és a Patient oszlop lista ki lett egészítve
+#El van mentve az összes adat array+dictionary-be, és a Patient/measurement data lista ki lett egészítve
 # a Reported Waveform[ms,uV], Raw Waveform[ms,uV], Pupil Waveform[ms,mm] dictionaryval,
 # "[]" jelzésnek beleírtam milyen mértékegységek vannak az adott dictionaryben
