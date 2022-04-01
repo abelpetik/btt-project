@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import  tkinter as tk
+import pickle
 
 from tkinter import filedialog
 root = tk.Tk()
@@ -18,8 +19,7 @@ drop_cols = (data[data >= limit].index)
 new_df = df.drop (columns = drop_cols)
 
 df_shape = new_df.shape
-print(df_shape)
-
+# print(df_shape)
 col_numbs = list(range(0, df_shape[1]))
 col_numbs_str = map(str, col_numbs)
 col_names = list(col_numbs_str)
@@ -33,7 +33,6 @@ print("Saved new data!")
 #Patient/mérési adatok dictionarybe tevése
 labels = new_df['0'].tolist()
 del labels[26:]
-print(labels)
 
 list_of_dicts = list()
 
@@ -50,22 +49,26 @@ unit_location = []
 for loc, unit in enumerate(new_df["2"]):
     if unit == "ms":
         unit_location.append(loc)
-print(unit_location)
+
+unit_loc_inc = list(np.asarray(unit_location) + 1)
+
+# print(unit_location)
+# print(unit_loc_inc)
 
 #Mértékegységekhez tartozó adatpárok arraybe, majd dictionarybe tevése, végül hozzácsatolás az oszlop Patient adatokat tartalmazó dictionaryhoz
-#Reported Waveform data
+#Reported Waveform dataset [ms,uV]
 a = 0
 j = 1
 for i in range(2, df_shape[1], 2):
 
     list1 = new_df[f'{i}'].tolist()
-    del list1[:unit_location[0]]
-    del list1[unit_location[1]:]
+    del list1[:unit_loc_inc[0]]
+    del list1[unit_loc_inc[1]:]
 
     j +=2
     list2 = new_df[f'{j}'].tolist()
-    del list2[:unit_location[0]]
-    del list2[unit_location[1]:]
+    del list2[:unit_loc_inc[0]]
+    del list2[unit_loc_inc[1]:]
 
     key = new_df.at[unit_location[0],"0"]
     unit_values_2d = np.array((list1,list2))
@@ -75,24 +78,22 @@ for i in range(2, df_shape[1], 2):
     list_of_dicts[a].update(new_dict)
     a += 1
 
-#Lekérdezés tesztelése
-print(list_of_dicts[3].keys())
-# print(list_of_dicts[3]['Reported Waveform'])
-# print(list_of_dicts[3]['Reported Waveform'][0])
+print("Reported Waveform measurement units: [ms,uV]")
 
-#Raw Waveform dataset
+
+#Raw Waveform dataset [ms,uV]
 
 a = 0
 j = 1
 for i in range(2, df_shape[1], 2):
     list1 = new_df[f'{i}'].tolist()
-    del list1[:unit_location[1]]
-    del list1[unit_location[2]:]
+    del list1[:unit_loc_inc[1]]
+    del list1[unit_loc_inc[2]:]
 
     j +=2
     list2 = new_df[f'{j}'].tolist()
-    del list2[:unit_location[1]]
-    del list2[unit_location[2]:]
+    del list2[:unit_loc_inc[1]]
+    del list2[unit_loc_inc[2]:]
 
     key = new_df.at[unit_location[1],"0"]
     unit_values_2d = np.array((list1,list2))
@@ -101,20 +102,19 @@ for i in range(2, df_shape[1], 2):
     list_of_dicts[a].update(new_dict)
     a += 1
 
-# Lekérdezés tesztelése
-print(list_of_dicts[3].keys())
-# print(list_of_dicts[3]['Raw Waveform'])
+print("Raw Waveform measurement units: [ms,uV]")
 
-#Pupil Waveform dataset
+
+#Pupil Waveform dataset [ms,mm]
 a = 0
 j = 1
 for i in range(2, df_shape[1], 2):
     list1 = new_df[f'{i}'].tolist()
-    del list1[:unit_location[2]]
+    del list1[:unit_loc_inc[2]]
 
     j +=2
     list2 = new_df[f'{j}'].tolist()
-    del list2[:unit_location[2]]
+    del list2[:unit_loc_inc[2]]
 
     key = new_df.at[unit_location[2],"0"]
     unit_values_2d = np.array((list1,list2))
@@ -123,10 +123,17 @@ for i in range(2, df_shape[1], 2):
     list_of_dicts[a].update(new_dict)
     a += 1
 
-#Lekérdezés tesztelése
-print(list_of_dicts[3].keys())
-# print(list_of_dicts[3]['Pupil Waveform'])
+print("Pupil Waveform measurement units: [ms,mm]")
+print(f"You can access the data using the following labels: {list_of_dicts[0].keys()}")
+print(f"Numbers of dictionaries: {len(list_of_dicts)}")
 
-#El van mentve az összes adat array+dictionary-be, és a Patient oszlop lista ki lett egészítve
-# a Reported Waveform[ms,uV], Raw Waveform[ms,uV], Pupil Waveform[ms,mm] dictionaryval,
-# "[]" jelzésnek beleírtam milyen mértékegységek vannak az adott dictionaryben
+# Lekérdezés tesztelése
+# print(list_of_dicts[3]['Reported Waveform'])
+# print(list_of_dicts[3]['Reported Waveform'][0])
+
+# print(list_of_dicts[1]['Raw Waveform'])
+# print(list_of_dicts[1]['Raw Waveform'][1])
+
+# print(list_of_dicts[0]['Pupil Waveform'])
+# print(list_of_dicts[0]['Pupil Waveform'][0])
+# print(list_of_dicts[0]['Pupil Waveform'][0][0])
