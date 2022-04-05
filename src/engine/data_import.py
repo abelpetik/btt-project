@@ -8,7 +8,7 @@ def import_data():
     Kiválaszhatod melyik file-t nyitod meg, majd az adatot list_of_dicts néven elérheted,
     amelyek tartalmazzák 2 oszloponként dictionary-ben a patient/measurement alap adatokat,
     ,valamint a számértékeket 2D numpy array formában, amik a Reported Waveform[ms,uV], Raw Waveform[ms,uV], Pupil Waveform[ms,mm] dictionary értékei.
-    A program mindig kiprinteli az adott file-ban található oszlopok alapján létrehozott dictionary számát is,
+    A program mindig kiprinteli az adott file-ban található oszlopok alapján létrehozott dictionary-k számát is,
     valamint emlékeztetőnek milyen sorrendben vannak a mértékegységek.
 
     Returns
