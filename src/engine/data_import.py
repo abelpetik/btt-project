@@ -1,27 +1,13 @@
 import numpy as np
 import pandas as pd
 import  tkinter as tk
-import pickle
+from tkinter import filedialog
 
-def import_data():
-    """
-    Kiválaszhatod melyik file-t nyitod meg, majd az adatot list_of_dicts néven elérheted,
-    amelyek tartalmazzák 2 oszloponként dictionary-ben a patient/measurement alap adatokat,
-    ,valamint a számértékeket 2D numpy array formában, amik a Reported Waveform[ms,uV], Raw Waveform[ms,uV], Pupil Waveform[ms,mm] dictionary értékei.
-    A program mindig kiprinteli az adott file-ban található oszlopok alapján létrehozott dictionary-k számát is,
-    valamint emlékeztetőnek milyen sorrendben vannak a mértékegységek.
-
-    Returns
-    -------
-
-    """
-
-    from tkinter import filedialog
+def importer():
     root = tk.Tk()
     root.withdraw()
     path_to_file = filedialog.askopenfilename()
     print(path_to_file)
-
 
     df = pd.read_csv (path_to_file, sep= ",", encoding = 'unicode_escape', header=None, low_memory=False)
     data = df.isna().sum() # Detect missing values. Count the NaN values in columns.
@@ -32,7 +18,8 @@ def import_data():
     new_df = df.drop (columns = drop_cols)
 
     df_shape = new_df.shape
-    # print(df_shape)
+    print(df_shape)
+
     col_numbs = list(range(0, df_shape[1]))
     col_numbs_str = map(str, col_numbs)
     col_names = list(col_numbs_str)
@@ -46,6 +33,7 @@ def import_data():
     #Patient/mérési adatok dictionarybe tevése
     labels = new_df['0'].tolist()
     del labels[26:]
+    print(labels)
 
     list_of_dicts = list()
 
@@ -62,28 +50,22 @@ def import_data():
     for loc, unit in enumerate(new_df["2"]):
         if unit == "ms":
             unit_location.append(loc)
+    print(unit_location)
 
-    unit_loc_inc = list(np.asarray(unit_location) + 1)
-
-    # print(unit_location)
-    # print(unit_loc_inc)
-
-
-    #Mértékegységekhez tartozó adatpárok arraybe, majd dictionarybe tevése, végül hozzácsatolás az oszlop Patient adatokat tartalmazó dictionaryhoz
-    #Reported Waveform dataset [ms,uV]
-
+    #Mértékegységekhez tartozó adatpárok arraybe, majd dictionarybe tevése, végül hozzácsatolás a Patient adatokat tartalmazó dictionary listához
+    #Reported Waveform data
     a = 0
     j = 1
     for i in range(2, df_shape[1], 2):
 
         list1 = new_df[f'{i}'].tolist()
-        del list1[:unit_loc_inc[0]]
-        del list1[unit_loc_inc[1]:]
+        del list1[:unit_location[0]]
+        del list1[unit_location[1]:]
 
         j +=2
         list2 = new_df[f'{j}'].tolist()
-        del list2[:unit_loc_inc[0]]
-        del list2[unit_loc_inc[1]:]
+        del list2[:unit_location[0]]
+        del list2[unit_location[1]:]
 
         key = new_df.at[unit_location[0],"0"]
         unit_values_2d = np.array((list1,list2))
@@ -93,22 +75,24 @@ def import_data():
         list_of_dicts[a].update(new_dict)
         a += 1
 
-    print("Reported Waveform measurement units: [ms,uV]")
+    #Lekérdezés tesztelése
+    print(list_of_dicts[3].keys())
+    # print(list_of_dicts[3]['Reported Waveform'])
+    # print(list_of_dicts[3]['Reported Waveform'][0])
 
-
-    #Raw Waveform dataset [ms,uV]
+    #Raw Waveform dataset
 
     a = 0
     j = 1
     for i in range(2, df_shape[1], 2):
         list1 = new_df[f'{i}'].tolist()
-        del list1[:unit_loc_inc[1]]
-        del list1[unit_loc_inc[2]:]
+        del list1[:unit_location[1]]
+        del list1[unit_location[2]:]
 
         j +=2
         list2 = new_df[f'{j}'].tolist()
-        del list2[:unit_loc_inc[1]]
-        del list2[unit_loc_inc[2]:]
+        del list2[:unit_location[1]]
+        del list2[unit_location[2]:]
 
         key = new_df.at[unit_location[1],"0"]
         unit_values_2d = np.array((list1,list2))
@@ -117,19 +101,20 @@ def import_data():
         list_of_dicts[a].update(new_dict)
         a += 1
 
-    print("Raw Waveform measurement units: [ms,uV]")
+    # Lekérdezés tesztelése
+    print(list_of_dicts[3].keys())
+    # print(list_of_dicts[3]['Raw Waveform'])
 
-
-    #Pupil Waveform dataset [ms,mm]
+    #Pupil Waveform dataset
     a = 0
     j = 1
     for i in range(2, df_shape[1], 2):
         list1 = new_df[f'{i}'].tolist()
-        del list1[:unit_loc_inc[2]]
+        del list1[:unit_location[2]]
 
         j +=2
         list2 = new_df[f'{j}'].tolist()
-        del list2[:unit_loc_inc[2]]
+        del list2[:unit_location[2]]
 
         key = new_df.at[unit_location[2],"0"]
         unit_values_2d = np.array((list1,list2))
@@ -138,35 +123,11 @@ def import_data():
         list_of_dicts[a].update(new_dict)
         a += 1
 
-    print("Pupil Waveform measurement units: [ms,mm]")
-    print(f"You can access the data using the following labels: {list_of_dicts[0].keys()}")
-    print(f"Numbers of dictionaries: {len(list_of_dicts)}")
+    #Lekérdezés tesztelése
+    #print(list_of_dicts[3].keys())
+    # print(list_of_dicts[3]['Pupil Waveform'])
 
+    #El van mentve az összes adat array+dictionary-be, és a Patient/measurement data lista ki lett egészítve
+    # a Reported Waveform[ms,uV], Raw Waveform[ms,uV], Pupil Waveform[ms,mm] dictionaryval,
+    # "[]" jelzésnek beleírtam milyen mértékegységek vannak az adott dictionaryben
     return list_of_dicts
-
-def save(final_data):
-
-    # nem tudom hogy ez így működik-e
-
-    with open('filename.pickle', 'wb') as handle:
-        pickle.dump(final_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    return final_data
-
-def load(file_name):
-
-    with open(file_name, 'rb') as handle:
-        b = pickle.load(handle)
-
-    return b
-
-# Lekérdezés tesztelése
-# print(list_of_dicts[3]['Reported Waveform'])
-# print(list_of_dicts[3]['Reported Waveform'][0])
-
-# print(list_of_dicts[1]['Raw Waveform'])
-# print(list_of_dicts[1]['Raw Waveform'][1])
-
-# print(list_of_dicts[0]['Pupil Waveform'])
-# print(list_of_dicts[0]['Pupil Waveform'][0])
-# print(list_of_dicts[0]['Pupil Waveform'][0][0])
