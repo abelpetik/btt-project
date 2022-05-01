@@ -68,86 +68,122 @@ def importer(path_to_file=None, verbose=False):
     for loc, unit in enumerate(new_df["2"]):
         if unit == "ms":
             unit_location.append(loc)
+
+    unit_loc_inc = list(np.asarray(unit_location) + 1)
+
     if verbose:
         print(unit_location)
+        print(unit_loc_inc)
 
     # Mértékegységekhez tartozó adatpárok arraybe, majd dictionarybe tevése, végül hozzácsatolás a Patient adatokat tartalmazó dictionary listához
     # Reported Waveform data
     a = 0
     j = 1
     for i in range(2, df_shape[1], 2):
-        list1 = new_df[f'{i}'].tolist()
-        del list1[:unit_location[0]]
-        del list1[unit_location[1]:]
+        full_list1 = new_df[f'{i}'].tolist()
+        list1 = full_list1[unit_loc_inc[0]: unit_location[1]]
 
         j += 2
-        list2 = new_df[f'{j}'].tolist()
-        del list2[:unit_location[0]]
-        del list2[unit_location[1]:]
+        full_list2 = new_df[f'{j}'].tolist()
+        list2 = full_list2[unit_loc_inc[0]: unit_location[1]]
 
         key = new_df.at[unit_location[0], "0"]
         unit_values_2d = np.array((list1, list2))
+        float_array = np.asarray(unit_values_2d, dtype=float)
         new_dict = {}
-        new_dict[key] = unit_values_2d
+        new_dict[key] = float_array
 
         list_of_dicts[a].update(new_dict)
         a += 1
 
-    # Lekérdezés tesztelése
     if verbose:
-        print(list_of_dicts[3].keys())
-    # print(list_of_dicts[3]['Reported Waveform'])
-    # print(list_of_dicts[3]['Reported Waveform'][0])
+        print("Reported Waveform measurement units: [ms,uV]")
 
     # Raw Waveform dataset
 
     a = 0
     j = 1
     for i in range(2, df_shape[1], 2):
-        list1 = new_df[f'{i}'].tolist()
-        del list1[:unit_location[1]]
-        del list1[unit_location[2]:]
+        full_list1 = new_df[f'{i}'].tolist()
+        list1 = full_list1[unit_loc_inc[1]: unit_location[2]]
 
         j += 2
-        list2 = new_df[f'{j}'].tolist()
-        del list2[:unit_location[1]]
-        del list2[unit_location[2]:]
+        full_list2 = new_df[f'{j}'].tolist()
+        list2 = full_list2[unit_loc_inc[1]: unit_location[2]]
 
         key = new_df.at[unit_location[1], "0"]
         unit_values_2d = np.array((list1, list2))
+        float_array = np.asarray(unit_values_2d, dtype=float)
         new_dict = {}
-        new_dict[key] = unit_values_2d
+        new_dict[key] = float_array
+
         list_of_dicts[a].update(new_dict)
         a += 1
 
-    # Lekérdezés tesztelése
     if verbose:
-        print(list_of_dicts[3].keys())
-    # print(list_of_dicts[3]['Raw Waveform'])
+        print("Raw Waveform measurement units: [ms,uV]")
 
     # Pupil Waveform dataset
     a = 0
     j = 1
     for i in range(2, df_shape[1], 2):
-        list1 = new_df[f'{i}'].tolist()
-        del list1[:unit_location[2]]
+        full_list1 = new_df[f'{i}'].tolist()
+        list1 = full_list1[unit_loc_inc[2]:]
 
         j += 2
-        list2 = new_df[f'{j}'].tolist()
-        del list2[:unit_location[2]]
+        full_list2 = new_df[f'{j}'].tolist()
+        list2 = full_list2[unit_loc_inc[2]:]
 
         key = new_df.at[unit_location[2], "0"]
         unit_values_2d = np.array((list1, list2))
+        float_array = np.asarray(unit_values_2d, dtype=float)
         new_dict = {}
-        new_dict[key] = unit_values_2d
+        new_dict[key] = float_array
+
         list_of_dicts[a].update(new_dict)
         a += 1
 
     # Lekérdezés tesztelése
-    # print(list_of_dicts[3].keys())
-    # print(list_of_dicts[3]['Pupil Waveform'])
 
-    # El van mentve az összes adat array+dictionary-be, és a Patient/measurement data lista ki lett egészítve
-    # a Reported Waveform[ms,uV], Raw Waveform[ms,uV], Pupil Waveform[ms,mm] dictionaryval,
-    # "[]" jelzésnek beleírtam milyen mértékegységek vannak az adott dictionaryben
+    print(list_of_dicts[0].keys())
+    print(list_of_dicts[0]['Reported Waveform'])
+    print(list_of_dicts[0]['Raw Waveform'])
+    print(list_of_dicts[0]['Pupil Waveform'])
+    print(list_of_dicts[0]['Pupil Waveform'][0])
+
+    if verbose:
+        print("Pupil Waveform measurement units: [ms,mm]")
+        print(f"You can access the data using the following labels: {list_of_dicts[0].keys()}")
+        print(f"Numbers of dictionaries: {len(list_of_dicts)}")
+
     return list_of_dicts
+
+def save(final_data):
+
+    # nem tudom hogy ez így működik-e
+
+    with open('filename.pickle', 'wb') as handle:
+        pickle.dump(final_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    return final_data
+
+def load(file_name):
+
+    with open(file_name, 'rb') as handle:
+        b = pickle.load(handle)
+
+    return b
+
+# Lekérdezés tesztelése
+# print(list_of_dicts[3]['Reported Waveform'])
+# print(list_of_dicts[3]['Reported Waveform'][0])
+
+# print(list_of_dicts[1]['Raw Waveform'])
+# print(list_of_dicts[1]['Raw Waveform'][1])
+
+# print(list_of_dicts[0]['Pupil Waveform'])
+# print(list_of_dicts[0]['Pupil Waveform'][0])
+# print(list_of_dicts[0]['Pupil Waveform'][0][0])
+
+if __name__ == '__main__':
+    importer()
