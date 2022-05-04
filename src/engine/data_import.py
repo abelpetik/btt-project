@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import tkinter as tk
 from tkinter import filedialog
+import pickle
 
 
 def importer(path_to_file=None, verbose=False):
@@ -145,11 +146,12 @@ def importer(path_to_file=None, verbose=False):
 
     # Lekérdezés tesztelése
 
-    print(list_of_dicts[0].keys())
-    print(list_of_dicts[0]['Reported Waveform'])
-    print(list_of_dicts[0]['Raw Waveform'])
-    print(list_of_dicts[0]['Pupil Waveform'])
-    print(list_of_dicts[0]['Pupil Waveform'][0])
+    if verbose:
+        print(list_of_dicts[0].keys())
+        print(list_of_dicts[0]['Reported Waveform'])
+        print(list_of_dicts[0]['Raw Waveform'])
+        print(list_of_dicts[0]['Pupil Waveform'])
+        print(list_of_dicts[0]['Pupil Waveform'][0])
 
     if verbose:
         print("Pupil Waveform measurement units: [ms,mm]")
@@ -158,21 +160,21 @@ def importer(path_to_file=None, verbose=False):
 
     return list_of_dicts
 
-def save(final_data):
+
+def save(out_filepath, data):
 
     # nem tudom hogy ez így működik-e
 
-    with open('filename.pickle', 'wb') as handle:
-        pickle.dump(final_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open(out_filepath, 'wb') as handle:
+        pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    return final_data
 
-def load(file_name):
+def load(in_filepath):
 
-    with open(file_name, 'rb') as handle:
-        b = pickle.load(handle)
+    with open(in_filepath, 'rb') as handle:
+        data = pickle.load(handle)
 
-    return b
+    return data
 
 # Lekérdezés tesztelése
 # print(list_of_dicts[3]['Reported Waveform'])
