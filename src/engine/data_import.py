@@ -162,15 +162,34 @@ def importer(path_to_file=None, verbose=False):
 
 
 def save(out_filepath, data):
+    """
+    Save any type of python data to .pkl file.
 
-    # nem tudom hogy ez így működik-e
+    Parameters
+    ----------
+    out_filepath: full path and filename of the output file. (should include .pkl at the end)
+    data: variable to save to the file
 
+    Returns
+    -------
+    None
+    """
     with open(out_filepath, 'wb') as handle:
         pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def load(in_filepath):
+    """
+    Load data from .pkl file.
 
+    Parameters
+    ----------
+    in_filepath: full path to the file to load.
+
+    Returns
+    -------
+    The data saved in the .pkl file as a single variable.
+    """
     with open(in_filepath, 'rb') as handle:
         data = pickle.load(handle)
 
