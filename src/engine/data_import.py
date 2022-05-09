@@ -31,14 +31,17 @@ def importer(path_to_file=None, verbose=False, return_path=False):
     # If selected file is analysed pickle file load that instead of new import
     filename, fileext = os.path.splitext(path_to_file)
     if fileext == '.pkl':
-        return load(path_to_file)
-
+        if return_path:
+            return load(path_to_file), path_to_file
+        else:
+            return load(path_to_file)
 
     df = pd.read_csv(path_to_file, sep=",", encoding='unicode_escape', header=None, low_memory=False)
     data = df.isna().sum()  # Detect missing values. Count the NaN values in columns.
     empty = data.values.tolist()
     max_value = max(empty)
     limit = max_value - 24
+    # TODO: go through pairwise, and drop if either has insufficient data
     drop_cols = (data[data >= limit].index)
     new_df = df.drop(columns=drop_cols)
 
@@ -46,36 +49,22 @@ def importer(path_to_file=None, verbose=False, return_path=False):
     if verbose:
         print(df_shape)
 
-    col_numbs = list(range(0, df_shape[1]))
-    col_numbs_str = map(str, col_numbs)
-    col_names = list(col_numbs_str)
-    new_df.columns = col_names  # Oszlopok újranevezése
-
-    # path_to_file2 = path_to_file / "_new.csv"
-    # new_df.to_csv(path_to_file2, sep=",", encoding='Latin-1', index=False, header=False)
-    if verbose:
-        print("Saved new data!")
+    new_df.columns = [str(i) for i in range(df_shape[1])]  # Oszlopok újranevezése
 
     # Patient/mérési adatok dictionarybe tevése
-    labels = new_df['0'].tolist()
-    del labels[26:]
+    labels = new_df['0'][:26].tolist()
     if verbose:
         print(labels)
 
     list_of_dicts = list()
 
     for i in range(2, df_shape[1], 2):
-        col_list = new_df[f'{i}'].tolist()
-        del col_list[26:]
+        col_list = new_df[str(i)][:26].tolist()
         data_pair_dict = dict(zip(labels, col_list))
         list_of_dicts.append(data_pair_dict)
 
     # Mértékegységet tartalmazó sorok megkeresése ("ms")
-    unit_location = []
-
-    for loc, unit in enumerate(new_df["2"]):
-        if unit == "ms":
-            unit_location.append(loc)
+    unit_location = new_df.loc[new_df['2'] == 'ms'].index.tolist()
 
     unit_loc_inc = list(np.asarray(unit_location) + 1)
 
@@ -88,16 +77,13 @@ def importer(path_to_file=None, verbose=False, return_path=False):
     a = 0
     j = 1
     for i in range(2, df_shape[1], 2):
-        full_list1 = new_df[f'{i}'].tolist()
-        list1 = full_list1[unit_loc_inc[0]: unit_location[1]]
+        list1 = new_df[f'{i}'][unit_loc_inc[0]: unit_location[1]].tolist()
 
         j += 2
-        full_list2 = new_df[f'{j}'].tolist()
-        list2 = full_list2[unit_loc_inc[0]: unit_location[1]]
+        list2 = new_df[f'{j}'][unit_loc_inc[0]: unit_location[1]].tolist()
 
         key = new_df.at[unit_location[0], "0"]
-        unit_values_2d = np.array((list1, list2))
-        float_array = np.asarray(unit_values_2d, dtype=float)
+        float_array = np.array((list1, list2), dtype=float)
         new_dict = {}
         new_dict[key] = float_array
 
@@ -215,6 +201,7 @@ def load(in_filepath):
 # print(list_of_dicts[0]['Pupil Waveform'])
 # print(list_of_dicts[0]['Pupil Waveform'][0])
 # print(list_of_dicts[0]['Pupil Waveform'][0][0])
+
 
 if __name__ == '__main__':
     importer()
