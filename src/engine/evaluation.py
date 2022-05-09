@@ -20,17 +20,56 @@ import scipy.stats
 from scipy.sparse.linalg import spsolve
 
 
-def distances_in_folder(folder_path: str):
+def evaluate_single_patient(uid, folder_path: str):
     """
-    Run evaluate_single_patient function on all files in the specified folder.
+    Evaluate ERG waveforms of a single patient compared to other patients' data in the same provided folder.
 
     Parameters
     ----------
-    folder_path
+    uid: Patient ID eg.: 'CB07'
+    folder_path: full path to folder containing patient's data
 
     Returns
     -------
+    evaluation: dict holding the scores of all recordings addressable in an electrode/protocol/eye hierarchy.
 
+    """
+    folder_path = Path(folder_path)
+    try:
+        all_waveform_distances_from_median = load(folder_path / 'evaluation_results.pkl')
+    except FileNotFoundError:
+        print("Couldn't find already existing evaluation! Calculating now.")
+        distances_in_folder(folder_path)
+        all_waveform_distances_from_median = load(folder_path / 'evaluation_results.pkl')
+
+    electrodes = ['Small', 'Normal']
+    protocols = ['dark_001', 'dark_3', 'light_3', 'light_30']
+    eyes = ['LeftEye', 'RightEye']
+
+    evaluation = {}
+
+    for electrode in electrodes:
+        evaluation[electrode] = {}
+        for protocol in protocols:
+            evaluation[electrode][protocol] = {}
+            for eye in eyes:
+                evaluation[electrode][protocol][eye] = get_z_score_for_patient(all_waveform_distances_from_median, uid, electrode, protocol, eye)
+
+    return evaluation
+
+
+def distances_in_folder(folder_path: str):
+    """
+    Calculate the euclidean distance between each recorded ERG waveform in a folder from the median
+    of all other corresponding recordings. Results are saved into the folder to evaluation_results.pkl.
+
+    Parameters
+    ----------
+    folder_path: full path to folder containing ERG data
+
+    Returns
+    -------
+    None
     """
     all_raw_waveforms = extract_all_patient_waveform_data(folder_path)
 
@@ -57,36 +96,6 @@ def distances_in_folder(folder_path: str):
 
     save(folder_path / 'evaluation_results.pkl', all_waveform_distances_from_median)
 
-    """
-    dark_001_small_distances = get_all_distances_for_protocol(all_waveform_distances_from_median, 'dark_001', 'Small')
-    plt.plot(dark_001_small_distances)
-    plt.show()
-
-    z_scores = get_z_scores(dark_001_small_distances)
-    print(z_scores)
-
-    dark_001_normal_distances = get_all_distances_for_protocol(all_waveform_distances_from_median, 'dark_001', 'Normal')
-    # plt.plot(dark_001_normal_distances)
-    # plt.show()
-    print(get_z_scores(dark_001_normal_distances))
-
-    dark_3_small_distances = get_all_distances_for_protocol(all_waveform_distances_from_median, 'dark_3', 'Small')
-    # plt.plot(dark_3_small_distances)
-    # plt.show()
-    print(get_z_scores(dark_3_small_distances))
-    dark_3_normal_distances = get_all_distances_for_protocol(all_waveform_distances_from_median, 'dark_3', 'Normal')
-    # plt.plot(dark_3_normal_distances)
-    # plt.show()
-    print(get_z_scores(dark_3_normal_distances))
-
-    light_3_small_distances = get_all_distances_for_protocol(all_waveform_distances_from_median, 'light_3', 'Small')
-    # plt.plot(light_3_small_distances)
-    # plt.show()
-    light_3_normal_distances = get_all_distances_for_protocol(all_waveform_distances_from_median, 'light_3', 'Normal')
-    # plt.plot(light_3_normal_distances)
-    # plt.show()
-    """
-
 
 def get_z_score_for_patient(all_distances, uid, electrode, protocol, eye):
     """
@@ -96,7 +105,7 @@ def get_z_score_for_patient(all_distances, uid, electrode, protocol, eye):
     ----------
     uid: patient ID
     electrode: electrode type {'Normal', 'Small'}
-    protocol: ERG protocol {'dark_001', 'dark_3', 'light_3', 'light_10'}
+    protocol: ERG protocol {'dark_001', 'dark_3', 'light_3', 'light_30'}
     eye: {'RightEye', 'LeftEye'}
 
     Returns
@@ -106,10 +115,6 @@ def get_z_score_for_patient(all_distances, uid, electrode, protocol, eye):
     distances = get_all_distances_for_protocol(all_distances, protocol, electrode)
     patient_distance = all_distances[uid][electrode][protocol][eye]
     return patient_distance / distances.std()
-
-
-def get_z_scores(samples):
-    return [samples[i] / samples.std() for i in range(samples.shape[0])]
 
 
 def get_all_distances_for_protocol(all_distances_dict: dict, protocol: str, electrode: str):
@@ -126,10 +131,8 @@ def get_all_distances_for_protocol(all_distances_dict: dict, protocol: str, elec
 
 def compare_patient_to_others(uid, electrode, all_raw_waveforms):
     patient_waveforms = all_raw_waveforms[uid][electrode]
-    print('Hi')
 
     protocols = list(patient_waveforms.keys())
-    protocols = ['dark_001', 'dark_3', 'light_3']
 
     patient_results = {}
 
@@ -141,8 +144,6 @@ def compare_patient_to_others(uid, electrode, all_raw_waveforms):
                 continue
             for eye in ['RightEye', 'LeftEye']:
                 try:
-                    # plt.plot(all_raw_waveforms[patient][electrode][protocol][eye][1] -
-                    #          all_raw_waveforms[patient][electrode][protocol][eye][1][0])
                     # clean_wave = highpass_filter(all_raw_waveforms[patient][electrode][protocol][eye][1])
 
                     # plt.plot(clean_wave)
@@ -156,7 +157,6 @@ def compare_patient_to_others(uid, electrode, all_raw_waveforms):
                     print(f"Missing data for patient: {patient}, electrode: {electrode}, protocol: {protocol}.")
 
         others_waveforms = np.stack(others_waveforms, axis=0)
-        # others_mean = np.mean(others_waveforms, axis=0)
         others_median = np.median(others_waveforms, axis=0)
         # plt.plot(others_median, color='r')
         # plt.plot(highpass_filter(patient_waveforms[protocol]['RightEye'][1]))
@@ -167,107 +167,7 @@ def compare_patient_to_others(uid, electrode, all_raw_waveforms):
         patient_results[protocol]['RightEye'] = np.linalg.norm(others_median-(patient_waveforms[protocol]['RightEye'][1]-patient_waveforms[protocol]['RightEye'][1][0]))
         patient_results[protocol]['LeftEye'] = np.linalg.norm(others_median-(patient_waveforms[protocol]['RightEye'][1]-patient_waveforms[protocol]['LeftEye'][1][0]))
 
-    print(f'Done with patient {uid}')
     return patient_results
-
-
-def evaluate_single_patient(uid, folder_path: str):
-    """
-    Import data from a single csv file, then extract all the important information from it, and classify
-    the recordings as healthy/unhealthy.
-
-    Parameters
-    ----------
-    uid: Patient ID eg.: 'CB07'
-    folder_path: full path to folder containing patient's data
-
-    Returns
-    -------
-    evaluation: dict holding the scores of all recordings addressable in an electrode/protocol/eye hierarchy.
-
-    """
-    folder_path = Path(folder_path)
-    try:
-        all_waveform_distances_from_median = load(folder_path / 'evaluation_results.pkl')
-    except FileNotFoundError:
-        print("Couldn't find already existing evaluation! Calculating now.")
-        distances_in_folder(folder_path)
-        all_waveform_distances_from_median = load(folder_path / 'evaluation_results.pkl')
-
-    electrodes = ['Small', 'Normal']
-    protocols = ['dark_001', 'dark_3', 'light_3']
-    eyes = ['LeftEye', 'RightEye']
-
-    evaluation = {}
-
-    for electrode in electrodes:
-        evaluation[electrode] = {}
-        for protocol in protocols:
-            evaluation[electrode][protocol] = {}
-            for eye in eyes:
-                evaluation[electrode][protocol][eye] = get_z_score_for_patient(all_waveform_distances_from_median, uid, electrode, protocol, eye)
-
-    return evaluation
-
-    """
-    OLD FUNCTION
-    patient_data = importer(filepath)
-    print(f'Number of recorded protocols: {len(patient_data)}')
-
-    # ---Sorting the individual recordings based on their protocol---
-    dark_001_indices = []
-    dark_3_indices = []
-    dark_30_indices = []
-    light_3_indices = []
-    light_30_hz_indices = []
-    uncategorized_indices = []
-
-    for i, protocol in enumerate(patient_data):
-        if protocol['Flash (cd·s/m² or cd/m²)'] == '0.01':
-            dark_001_indices.append(i)
-        elif protocol['Flash (cd·s/m² or cd/m²)'] == '3' and float(protocol['Stimulus Frequency']) <= 0.1:
-            dark_3_indices.append(i)
-        elif protocol['Flash (cd·s/m² or cd/m²)'] == '3' and 1.5 < float(protocol['Stimulus Frequency']) < 2.5:
-            light_3_indices.append(i)
-        elif protocol['Flash (cd·s/m² or cd/m²)'] == '3' and 28 < float(protocol['Stimulus Frequency']):
-            light_30_hz_indices.append(i)
-        elif protocol['Background (cd/m²)'] == '30':
-            dark_30_indices.append(i)
-            # TODO: These should be dropped, they don't have waveform data
-        else:
-            uncategorized_indices.append(i)
-
-    # ---Printing found indices for all protocols---
-    print(f"Dark 0.01: {dark_001_indices}")
-    print(f"Dark 3: {dark_3_indices}")
-    print(f"Dark 30: {dark_30_indices}")
-    print(f"Light 3: {light_3_indices}")
-    print(f"Light 30 Hz: {light_30_hz_indices}")
-    if uncategorized_indices:
-        warnings.warn(f"There were {len(uncategorized_indices)} recordings that do not correspond to a protocol.")
-
-    # ---Storing relevant parameters in dictionaries---
-    dark_001_params = {'BWaveTime': [], 'BWaveAmplitude': []}
-    get_params(dark_001_params, dark_001_indices, patient_data)
-
-    dark_3_params = {'AWaveTime': [], 'AWaveAmplitude': [], 'BWaveTime': [], 'BWaveAmplitude': []}
-    get_params(dark_3_params, dark_3_indices, patient_data)
-
-    light_3_params = {'AWaveTime': [], 'AWaveAmplitude': [], 'BWaveTime': [], 'BWaveAmplitude': []}
-    get_params(light_3_params, light_3_indices, patient_data)
-
-    light_30_hz_params = {'FundamentalImplicitTime': [], 'WaveformImplicitTime': [], 'FundamentalAmplitude': [],
-                                  'WaveformAmplitude': []}
-    get_params(light_30_hz_params, light_30_hz_indices, patient_data)
-
-    time, data = get_raw_data(patient_data[0], field='Raw Waveform')
-
-    # import matplotlib.pyplot as plt
-    # plt.plot(time, data)
-    # plt.show()
-
-    save(filepath[:-3] + 'pkl', patient_data)
-    """
 
 
 def extract_all_patient_waveform_data(folder_path: str, reimport=False, preprocessed=True):
@@ -308,7 +208,7 @@ def extract_single_patient_waveform_data(filepath: str = None, field=None):
     dark_3_indices = {}
     dark_30_indices = {}
     light_3_indices = {}
-    light_30_hz_indices = {}
+    light_30_indices = {}
     uncategorized_indices = []
 
     for i, protocol in enumerate(patient_data):
@@ -319,10 +219,10 @@ def extract_single_patient_waveform_data(filepath: str = None, field=None):
         elif protocol['Flash (cd·s/m² or cd/m²)'] == '3' and 1.5 < float(protocol['Stimulus Frequency']) < 2.5:
             light_3_indices[protocol['TestedEye']] = i
         elif protocol['Flash (cd·s/m² or cd/m²)'] == '3' and 28 < float(protocol['Stimulus Frequency']):
-            light_30_hz_indices[protocol['TestedEye']] = i
+            light_30_indices[protocol['TestedEye']] = i
         elif protocol['Background (cd/m²)'] == '30':
             dark_30_indices[protocol['TestedEye']] = i
-            # TODO: These should be dropped, they don't have waveform data
+            # These have to be dropped, they don't have waveform data
         else:
             uncategorized_indices.append(i)
 
@@ -331,12 +231,12 @@ def extract_single_patient_waveform_data(filepath: str = None, field=None):
     print(f"Dark 3: {dark_3_indices}")
     print(f"Dark 30: {dark_30_indices}")
     print(f"Light 3: {light_3_indices}")
-    print(f"Light 30 Hz: {light_30_hz_indices}")
+    print(f"Light 30 Hz: {light_30_indices}")
     if uncategorized_indices:
         warnings.warn(f"There were {len(uncategorized_indices)} recordings that do not correspond to a protocol.")
 
     waveforms = {}
-    protocols = ['dark_001', 'dark_3', 'light_3', 'light_30_hz']
+    protocols = ['dark_001', 'dark_3', 'light_3', 'light_30']
 
     for prot in protocols:
         waveforms[prot] = {}
@@ -409,19 +309,17 @@ def calc_baseline(signal):
 
     return baseline[: len(signal)]
 
+
 import scipy.signal
+
+
 def highpass_filter(signal):
     b, a = scipy.signal.butter(3, 0.2, 'highpass', fs=2000)
     return scipy.signal.filtfilt(b, a, signal, axis=0)
 
 
 if __name__ == '__main__':
-    # distances_in_folder(r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit')
     print(evaluate_single_patient('CB07', r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit'))
-    # extract_all_patient_waveform_data(r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit')
-    # extract_single_patient_waveform_data(r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit\CB07_970322_220216113048_Normal.csv')
-    # print(load(r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit\CB07_970322_220216113048_Normal.pkl'))
-    # evaluate_single_patient()
 
     # all_waveform_distances_from_mean = load(r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit\evaluation_results.pkl')
     # print(all_waveform_distances_from_mean)
