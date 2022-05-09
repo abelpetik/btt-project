@@ -1,3 +1,4 @@
+import os.path
 import numpy as np
 import pandas as pd
 import tkinter as tk
@@ -5,7 +6,7 @@ from tkinter import filedialog
 import pickle
 
 
-def importer(path_to_file=None, verbose=False):
+def importer(path_to_file=None, verbose=False, return_path=False):
     """
     #TODO
 
@@ -26,6 +27,12 @@ def importer(path_to_file=None, verbose=False):
             UserWarning("No file selected, quitting.")
             return
     print(f"Importing file: {path_to_file}")
+
+    # If selected file is analysed pickle file load that instead of new import
+    filename, fileext = os.path.splitext(path_to_file)
+    if fileext == '.pkl':
+        return load(path_to_file)
+
 
     df = pd.read_csv(path_to_file, sep=",", encoding='unicode_escape', header=None, low_memory=False)
     data = df.isna().sum()  # Detect missing values. Count the NaN values in columns.
@@ -157,6 +164,9 @@ def importer(path_to_file=None, verbose=False):
         print("Pupil Waveform measurement units: [ms,mm]")
         print(f"You can access the data using the following labels: {list_of_dicts[0].keys()}")
         print(f"Numbers of dictionaries: {len(list_of_dicts)}")
+
+    if return_path:
+        return list_of_dicts, path_to_file
 
     return list_of_dicts
 
