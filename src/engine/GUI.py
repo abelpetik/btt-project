@@ -336,6 +336,7 @@ while True:
         # -------------------------------  MATPLOTLIB CODE --------------------------
         plt.figure(1)
         fig = plt.gcf()
+        fig.clf()
         DPI = fig.get_dpi()
         fig.set_size_inches(404*2 / float(DPI), 404*1.3/ float(DPI))
 

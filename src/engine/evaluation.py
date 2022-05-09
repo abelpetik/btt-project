@@ -171,7 +171,7 @@ def compare_patient_to_others(uid, electrode, all_raw_waveforms):
     return patient_results
 
 
-def evaluate_single_patient(uid, folder_path: str = None):
+def evaluate_single_patient(uid, folder_path: str):
     """
     Import data from a single csv file, then extract all the important information from it, and classify
     the recordings as healthy/unhealthy.
@@ -414,13 +414,15 @@ def highpass_filter(signal):
     b, a = scipy.signal.butter(3, 0.2, 'highpass', fs=2000)
     return scipy.signal.filtfilt(b, a, signal, axis=0)
 
+
 if __name__ == '__main__':
-    evaluate_in_folder(r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit')
+    # distances_in_folder(r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit')
+    print(evaluate_single_patient('CB07', r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit'))
     # extract_all_patient_waveform_data(r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit')
     # extract_single_patient_waveform_data(r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit\CB07_970322_220216113048_Normal.csv')
     # print(load(r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit\CB07_970322_220216113048_Normal.pkl'))
     # evaluate_single_patient()
 
-    all_waveform_distances_from_mean = load(r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit\evaluation_results.pkl')
-    print(all_waveform_distances_from_mean)
+    # all_waveform_distances_from_mean = load(r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit\evaluation_results.pkl')
+    # print(all_waveform_distances_from_mean)
 
