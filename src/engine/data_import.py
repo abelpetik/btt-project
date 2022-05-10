@@ -19,6 +19,9 @@ def importer(path_to_file=None, verbose=False, return_path=False):
     -------
 
     """
+
+
+
     if path_to_file is None:
         root = tk.Tk()
         root.withdraw()
@@ -154,7 +157,8 @@ def importer(path_to_file=None, verbose=False, return_path=False):
         print(f"Numbers of dictionaries: {len(list_of_dicts)}")
 
     if return_path:
-        return list_of_dicts, path_to_file
+        print(str(path_to_file))
+        return list_of_dicts, str(path_to_file)
 
     return list_of_dicts
 

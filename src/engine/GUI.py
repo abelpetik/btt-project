@@ -1,33 +1,19 @@
-from pathlib import Path
 import PySimpleGUI as sg
-import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-#from matplotlib.ticker import PercentFormatte
-import numpy as np
-from matplotlib.figure import Figure
-
+import os.path
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-
 import numpy as np
-import pandas as pd
-import  tkinter as tk
-from tkinter import filedialog
 import data_import
-
+from evaluation import evaluate_single_patient
 from operator import itemgetter
 
 
-
 sg.theme('GreenTan')
-'''
-menu_def = [['&File', ['&Open::KeyOpen', '&Save::KeySave', '&Properties::KeyProp', 'E&xit']],
-            ['Help', 'About...'], ]
-'''
+
+
 menu_def = [['File', ['Open', 'Save', 'Exit']],
-            ['Edit', ['Paste', ['Special', 'Normal', ], 'Undo'], ],
-            ['Help', 'About...'], ]
+            ['Help', ['Support'], ],
+            ['About', 'About...'], ]
 
 
 # ---------------------- GLOBAL VARIABLES -------------------------#
@@ -59,6 +45,9 @@ right_light_30_data = []
 #Output header:
 patient_text_output = []
 
+
+path_to_mydata=''
+
 # ---------------------- FUNCTIONS -------------------------#
 
 def sep(time, uv):
@@ -74,7 +63,6 @@ def sep(time, uv):
         new_w_time.append(float(time[k]))
         new_w_data.append(float(uv[k]))
 
-    print(new_w_time)
     return new_w_time, new_w_data
 
 
@@ -92,7 +80,7 @@ def recordings_seperator(data_file, tested_eye, stim_freq):
 def sensortype(data_file):
     s_type=' '
     if data_file[0]['ElectrodePackageType'] == 'ElectrodeType_LkcRimElectrodePair_SensorStrip':
-        s_type='Normal'
+        s_type= 'Normal'
     if data_file[0]['ElectrodePackageType'] == 'ElectrodeType_SmallSensorStrip':
         s_type = 'Small'
     return s_type
@@ -109,20 +97,20 @@ def labelling(ordered_data_file):
         corrupt = 'Corrupt' + str(k[i])
         if values[disease] == True:
             ordered_data_file[i]['Label']='Disease'
-            print('D')
         if values[corrupt] == True:
             ordered_data_file[i]['Label']='Corrupt'
-            print('C')
         if values[normal] == True:
             ordered_data_file[i]['Label'] = 'Normal'
-            print('N')
-    print(len(ordered_data_file))
     return ordered_data_file
 
+
+ERG_protocols= ['Dark 0.01','Dark 3.0', 'Light 3.0', 'Light 30']
+ERG_protocols=ERG_protocols*2
 
 
 def get_data(ordered_data_file,k):
     output_string= str(k+1) + '. ' + 'Tested eye: ' +str(ordered_data_file[k].get('TestedEye')) \
+                        + ', ERG protocol: ' + ERG_protocols[k] \
                         + ', Stimulus Frequency: ' + str(ordered_data_file[k].get('Stimulus Frequency')) \
                         +  ', Label: '+ str(ordered_data_file[k].get('Label'))
     return output_string
@@ -269,14 +257,14 @@ plot_test=[
         layout=[
             [sg.Canvas(key='fig_cv',
                        # it's important that you set this size
-                       size=(400 *2, 400*1.3)
+                       size=(400 *2, 400*1.1)
                        )]
         ],
         background_color='#DAE0E6',
         pad=(0, 0) )
            ],
 
-        [sg.MLine(default_text='Here you can add your comments', size=(110, 1),key='query')],
+        [sg.MLine(default_text=f'Automated classification:\n', size=(110, 6), auto_refresh=True, key='query')],
 
         ]
 
@@ -294,10 +282,21 @@ while True:
         break
 
     if event == 'About...':
-        sg.popup('About this program', 'Version 1.0', 'PySimpleGUI rocks...')
+        sg.popup('Enlighter', 'Version 1.0', 'The enlighter development team was formed earlier this year to help '
+                                             'detect patients with retinal disorders and thus support the early treatment of those suffering from this common disease')
+
+    if event == 'Support':
+        sg.popup('If you need any help please contact our Support Team', ' ', 'Data import and early  data processing:' ,' Anett Matuscsák <anettmatuscsak@gmail.com> ', ' ',
+                 'GUI development:', ' Klaudia Csikós <csikos.klaudia2@gmail.com> ', ' ','Automated classification & Everything else:' , ' Ábel Petik <abelpetik@gmail.com > ')
 
     if event == 'Open':
-        data_file=data_import.importer()
+
+        event = 'Clear'
+        window['query'].update('Automated classification:\n')
+        patient_text_output.clear()
+
+
+        data_file, path_to_mydata =data_import.importer(return_path=True)
         i = 0
         k=0
         while i < len(data_file):
@@ -329,7 +328,27 @@ while True:
         patient_text_output.append('Patient Birthdate:' + str(patient_birthday))
         patient_text_output.append('Electrode type:' + str(electrode_type))
 
-        print(patient_text_output)
+
+
+        dicti= evaluate_single_patient(patient_id, os.path.split(path_to_mydata)[0])
+
+        classification=''
+
+        for protocol in dicti[electrode_type].keys():
+            for eye in dicti[electrode_type][protocol].keys():
+                if dicti[electrode_type][protocol][eye] > 4:
+                    verdict = 'bad'
+                elif dicti[electrode_type][protocol][eye] > 3:
+                    verdict = 'suspicious'
+                else:
+                    verdict = 'good'
+                classification += f'\n{protocol}, {eye}: {verdict}'
+
+        print(classification)
+
+        if len(classification)> 0:
+            window['query'].update(f'Automated classification\n ------------------------------- {classification} \n-------------------------------')
+
 
 
     if event == 'Plot':
@@ -338,12 +357,13 @@ while True:
         fig = plt.gcf()
         fig.clf()
         DPI = fig.get_dpi()
-        fig.set_size_inches(404*2 / float(DPI), 404*1.3/ float(DPI))
+        fig.set_size_inches(404*2 / float(DPI), 404*1.1/ float(DPI))
 
         plt.title('ERG recording')
         plt.xlabel('ms')
         plt.ylabel('mV')
         plt.grid()
+
 
         # -------------------------------SUBPLOTTING-------------------------------
 
@@ -397,6 +417,7 @@ while True:
             if values['Righteye'] == True:
                 plt.plot(right_light_30_time, right_light_30_data, color='grey', label='right eye')
             plt.legend()
+
             plt.title('Light 30')
 
         plt.xlabel('ms')
@@ -426,7 +447,7 @@ while True:
         plt.clf()
         fig = plt.gcf()
         DPI = fig.get_dpi()
-        fig.set_size_inches(404*2/ float(DPI), 404*1.3/ float(DPI))
+        fig.set_size_inches(404*2/ float(DPI), 404*1.1/ float(DPI))
 
         plt.title('ERG recording')
         plt.xlabel('ms')
@@ -442,20 +463,24 @@ while True:
         ordered_data_file = labelling(ordered_data_file)
 
         query = values['query'].rstrip()
-        print(query)
 
-        with open('output.txt', 'w') as outputfile:
+        outfile= os.path.splitext(path_to_mydata)[0]+'.txt'
+        print(outfile)
+        with open(outfile, 'w') as outputfile:
             outputfile.write(" ".join(patient_text_output)+'\n')
-        with open('output.txt', 'a') as outputfile:
+        with open(outfile, 'a') as outputfile:
+            outputfile.write(" " + '\n')
+            outputfile.write("Manually labelled data " + '\n')
+            outputfile.write("-------------------------------" + '\n')
             for k in range(len(ordered_data_file)):
                 labelled_data = get_data(ordered_data_file, k)
                 outputfile.write("".join(labelled_data) + '\n')
+            outputfile.write("-------------------------------" + '\n')
 
             outputfile.write(" " + '\n')
-            outputfile.write("Comment: " + query + '\n')
+            outputfile.write(query + '\n')
 
-
-
+        data_import.save(os.path.splitext(path_to_mydata)[0]+'.pkl', ordered_data_file )
 
 
 

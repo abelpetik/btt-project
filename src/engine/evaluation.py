@@ -319,4 +319,9 @@ def highpass_filter(signal):
 
 
 if __name__ == '__main__':
-    print(evaluate_single_patient('CB07', r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit'))
+    #distances_in_folder(r'C:\Data\ITK MSc\Info Bionics\Semester II\Brain Therapy Technologies\Data 1\Data from first visit')
+    # extract_all_patient_waveform_data(r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit')
+    # extract_single_patient_waveform_data(r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit\CB07_970322_220216113048_Normal.csv')
+    # print(load(r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit\CB07_970322_220216113048_Normal.pkl'))
+    # evaluate_single_patient()
+    print(evaluate_single_patient('CB07', r'C:\Data\ITK MSc\Info Bionics\Semester II\Brain Therapy Technologies\Data 1\Data from first visit'))
