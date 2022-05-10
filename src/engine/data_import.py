@@ -41,8 +41,10 @@ def importer(path_to_file=None, verbose=False, return_path=False):
     empty = data.values.tolist()
     max_value = max(empty)
     limit = max_value - 24
-    # TODO: go through pairwise, and drop if either has insufficient data
-    drop_cols = (data[data >= limit].index)
+    drop_cols = []
+    for i in range(2, df.shape[1], 2):
+        if data[i] > limit or data[i+1] > limit:
+            drop_cols.extend((i, i+1))
     new_df = df.drop(columns=drop_cols)
 
     df_shape = new_df.shape

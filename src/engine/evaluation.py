@@ -320,7 +320,3 @@ def highpass_filter(signal):
 
 if __name__ == '__main__':
     print(evaluate_single_patient('CB07', r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit'))
-
-    # all_waveform_distances_from_mean = load(r'C:\Abel\Egyetem\MSc\3.felev\BTT\Data from first visit\evaluation_results.pkl')
-    # print(all_waveform_distances_from_mean)
-
