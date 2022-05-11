@@ -118,6 +118,19 @@ def get_z_score_for_patient(all_distances, uid, electrode, protocol, eye):
 
 
 def get_all_distances_for_protocol(all_distances_dict: dict, protocol: str, electrode: str):
+    """
+    Get all the Euclidean distance values corresponding to a chosen protocol and electrode type.
+
+    Parameters
+    ----------
+    all_distances_dict: dictionary containing all recording distances from median responses
+    protocol: ERG protocol {'dark_001', 'dark_3', 'light_3', 'light_30'}
+    electrode: electrode type to calculate for {'Normal', 'Small'}
+
+    Returns
+    -------
+    Array containing extracted distances.
+    """
     all_distances = []
     for patient in all_distances_dict.keys():
         try:
@@ -129,7 +142,21 @@ def get_all_distances_for_protocol(all_distances_dict: dict, protocol: str, elec
     return np.array(all_distances)
 
 
-def compare_patient_to_others(uid, electrode, all_raw_waveforms):
+def compare_patient_to_others(uid, electrode, all_raw_waveforms, show_plots=False):
+    """
+    Calculate Euclidean distance from median response calculated from all other waveforms with a leave-one-out paradigm.
+
+    Parameters
+    ----------
+    uid
+    electrode
+    all_raw_waveforms
+    show_plots
+
+    Returns
+    -------
+    Patient's results in a dictionary.
+    """
     patient_waveforms = all_raw_waveforms[uid][electrode]
 
     protocols = list(patient_waveforms.keys())
@@ -144,13 +171,6 @@ def compare_patient_to_others(uid, electrode, all_raw_waveforms):
                 continue
             for eye in ['RightEye', 'LeftEye']:
                 try:
-                    # clean_wave = highpass_filter(all_raw_waveforms[patient][electrode][protocol][eye][1])
-
-                    # plt.plot(clean_wave)
-                    # plt.plot(all_raw_waveforms[patient][electrode][protocol][eye][1])
-                    # plt.title("Before - After")
-                    # plt.show()
-                    # others_waveforms.append(clean_wave)
                     others_waveforms.append(all_raw_waveforms[patient][electrode][protocol][eye][1])
 
                 except KeyError:
@@ -158,12 +178,15 @@ def compare_patient_to_others(uid, electrode, all_raw_waveforms):
 
         others_waveforms = np.stack(others_waveforms, axis=0)
         others_median = np.median(others_waveforms, axis=0)
-        # plt.plot(others_median, color='r')
-        # plt.plot(highpass_filter(patient_waveforms[protocol]['RightEye'][1]))
-        # plt.plot(patient_waveforms[protocol]['RightEye'][1])
-        # plt.plot(patient_waveforms[protocol]['LeftEye'][1])
-        # plt.plot(patient_waveforms[protocol]['RightEye'][1]-patient_waveforms[protocol]['RightEye'][1][0])
-        # plt.show()
+        if show_plots:
+            plt.plot(others_median-others_median[0], color='k', label='Median')
+            plt.plot(patient_waveforms[protocol]['RightEye'][1], label='Right eye')
+            plt.plot(patient_waveforms[protocol]['LeftEye'][1], label='Left eye')
+            plt.xlabel('ms')
+            plt.ylabel('uV')
+            plt.legend()
+            plt.show()
+
         patient_results[protocol]['RightEye'] = np.linalg.norm(others_median-(patient_waveforms[protocol]['RightEye'][1]-patient_waveforms[protocol]['RightEye'][1][0]))
         patient_results[protocol]['LeftEye'] = np.linalg.norm(others_median-(patient_waveforms[protocol]['RightEye'][1]-patient_waveforms[protocol]['LeftEye'][1][0]))
 
@@ -171,6 +194,19 @@ def compare_patient_to_others(uid, electrode, all_raw_waveforms):
 
 
 def extract_all_patient_waveform_data(folder_path: str, reimport=False, preprocessed=True):
+    """
+    Extract waveform data from all recordings in a folder.
+
+    Parameters
+    ----------
+    folder_path: full path to folder containing ERG data
+    reimport: Whether to reimport all waveforms if they are already present in an 'all_raw_waveforms.pkl' file.
+    preprocessed: Extract pre-processed "Reported waveform" instead of raw.
+
+    Returns
+    -------
+    Extracted waveofrm data in a dictionary.
+    """
     folder_path = Path(folder_path)
     files_in_folder = os.listdir(folder_path)
     if 'all_raw_waveforms.pkl' in files_in_folder and not reimport:
