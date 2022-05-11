@@ -8,16 +8,16 @@ import pickle
 
 def importer(path_to_file=None, verbose=False, return_path=False):
     """
-    #TODO
+    # Open a CSV file and sort the data pairs into dictionaries with the first column labels as the keys.
 
     Parameters
     ----------
     path_to_file: full path to file to import. Default is 'None' in which case the user can choose the file in a GUI.
-    verbose: Set thw verbosity of the command line output.
+    verbose: Set the verbosity of the command line output.
 
     Returns
     -------
-
+    List of dictionaries
     """
 
 
@@ -39,6 +39,7 @@ def importer(path_to_file=None, verbose=False, return_path=False):
         else:
             return load(path_to_file)
 
+    # Delete the empty columns from the dataset
     df = pd.read_csv(path_to_file, sep=",", encoding='unicode_escape', header=None, low_memory=False)
     data = df.isna().sum()  # Detect missing values. Count the NaN values in columns.
     empty = data.values.tolist()
@@ -56,7 +57,7 @@ def importer(path_to_file=None, verbose=False, return_path=False):
 
     new_df.columns = [str(i) for i in range(df_shape[1])]  # Oszlopok újranevezése
 
-    # Patient/mérési adatok dictionarybe tevése
+    # Create dictionary to store patient, experimental parameters
     labels = new_df['0'][:26].tolist()
     if verbose:
         print(labels)
@@ -68,7 +69,7 @@ def importer(path_to_file=None, verbose=False, return_path=False):
         data_pair_dict = dict(zip(labels, col_list))
         list_of_dicts.append(data_pair_dict)
 
-    # Mértékegységet tartalmazó sorok megkeresése ("ms")
+    # Find rows containing measurement units ("ms")
     unit_location = new_df.loc[new_df['2'] == 'ms'].index.tolist()
 
     unit_loc_inc = list(np.asarray(unit_location) + 1)
@@ -77,7 +78,7 @@ def importer(path_to_file=None, verbose=False, return_path=False):
         print(unit_location)
         print(unit_loc_inc)
 
-    # Mértékegységekhez tartozó adatpárok arraybe, majd dictionarybe tevése, végül hozzácsatolás a Patient adatokat tartalmazó dictionary listához
+    # Creat numpy arrray from ms-UV data pair and attach them to the existing dictionary of the column as new key
     # Reported Waveform data
     a = 0
     j = 1
@@ -99,7 +100,6 @@ def importer(path_to_file=None, verbose=False, return_path=False):
         print("Reported Waveform measurement units: [ms,uV]")
 
     # Raw Waveform dataset
-
     a = 0
     j = 1
     for i in range(2, df_shape[1], 2):
@@ -142,8 +142,7 @@ def importer(path_to_file=None, verbose=False, return_path=False):
         list_of_dicts[a].update(new_dict)
         a += 1
 
-    # Lekérdezés tesztelése
-
+    # Query testing
     if verbose:
         print(list_of_dicts[0].keys())
         print(list_of_dicts[0]['Reported Waveform'])
@@ -197,16 +196,6 @@ def load(in_filepath):
 
     return data
 
-# Lekérdezés tesztelése
-# print(list_of_dicts[3]['Reported Waveform'])
-# print(list_of_dicts[3]['Reported Waveform'][0])
-
-# print(list_of_dicts[1]['Raw Waveform'])
-# print(list_of_dicts[1]['Raw Waveform'][1])
-
-# print(list_of_dicts[0]['Pupil Waveform'])
-# print(list_of_dicts[0]['Pupil Waveform'][0])
-# print(list_of_dicts[0]['Pupil Waveform'][0][0])
 
 
 if __name__ == '__main__':
