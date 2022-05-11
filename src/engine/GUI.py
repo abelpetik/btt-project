@@ -8,16 +8,9 @@ from evaluation import evaluate_single_patient
 from operator import itemgetter
 
 
-sg.theme('GreenTan')
-
-
-menu_def = [['File', ['Open', 'Save', 'Exit']],
-            ['Help', ['Support'], ],
-            ['About', 'About...'], ]
 
 
 # ---------------------- GLOBAL VARIABLES -------------------------#
-
 data_file=[]
 
 #Separated ERG recordings:
@@ -44,17 +37,22 @@ right_light_30_data = []
 
 #Output header:
 patient_text_output = []
-
-
+#Path to the data
 path_to_mydata=''
 
 # ---------------------- FUNCTIONS -------------------------#
 
 def sep(time, uv):
+    """
+    #Truncation of the time and signal (data) arrays.
+    The end of each recording is indicated by ms, uV or nan.
+
+    Returns
+    -------
+    Correct length of time and data array
+    """
     new_w_time=[]
     new_w_data=[]
-    time = np.delete(time, 0)
-    uv = np.delete(uv, 0)
     for k in range(len(time)):
         if time[k] == 'nan' or time[k] == 'ms':
             break
@@ -67,6 +65,14 @@ def sep(time, uv):
 
 
 def recordings_seperator(data_file, tested_eye, stim_freq):
+    """
+    # Separeting the Reported Waveform into time and signal (data) arrays.
+    Seperation is done by TestedEye and Stimulus Frequency.
+
+    Returns
+    -------
+    Time and data array
+    """
     time=[]
     data=[]
     for i in range(len(data_file)):
@@ -78,6 +84,13 @@ def recordings_seperator(data_file, tested_eye, stim_freq):
 
 
 def sensortype(data_file):
+    """
+    Changing ElectrodePackageType variable to "Normal" or "Small"
+
+    Returns
+    -------
+    "Normal" or "Small"
+    """
     s_type=' '
     if data_file[0]['ElectrodePackageType'] == 'ElectrodeType_LkcRimElectrodePair_SensorStrip':
         s_type= 'Normal'
@@ -87,8 +100,15 @@ def sensortype(data_file):
 
 
 
+
 def labelling(ordered_data_file):
-    # Check for disease or corrupt:
+    """
+    Adding manually labelled data section to the ordered data file
+
+    Returns
+    -------
+    Ordered data file
+    """
     i=0
     k=[1,2,3,4,5,6,7,8]
     for i in range(len(ordered_data_file)):
@@ -109,6 +129,13 @@ ERG_protocols=ERG_protocols*2
 
 
 def get_data(ordered_data_file,k):
+    """
+    Generating output text file
+
+    Returns
+    -------
+    The output string with manual labelling
+    """
     output_string= str(k+1) + '. ' + 'Tested eye: ' +str(ordered_data_file[k].get('TestedEye')) \
                         + ', ERG protocol: ' + ERG_protocols[k] \
                         + ', Stimulus Frequency: ' + str(ordered_data_file[k].get('Stimulus Frequency')) \
@@ -117,30 +144,40 @@ def get_data(ordered_data_file,k):
 
 
 def data_reorder(data_file):
+    """
+    Reordering data file sorted by Stimulus Frequency
+
+    Returns
+    -------
+    Ordered data file
+    """
     left_eye = []
     right_eye = []
     for i in range(len(data_file)):
         if data_file[i]['TestedEye']=='LeftEye':
             left_eye.append(data_file[i])
-            #left_eye_stim.append(float(data_file[i]['Stimulus Frequency']))
 
         if data_file[i]['TestedEye'] =='RightEye':
             right_eye.append(data_file[i])
-            #right_eye_stim.append(float(data_file[i]['Stimulus Frequency']))
 
     newlist_left = sorted(left_eye, key=itemgetter('Stimulus Frequency'))
     newlist_right = sorted(right_eye, key=itemgetter('Stimulus Frequency'))
-
     new_data= newlist_left + newlist_right
-
     return new_data
 
 
 def subplotting(states):
+    """
+    Supports the automated subplotting depending on the number of chosen ERG recording
+
+    Returns
+    -------
+    Sequential number which will be the variable of the following function: plt.subplot()
+    """
     length = len(np.where(states)[0]) #3
     sb=[]
     for i in range(length):
-        sb.append(length*100 + 10 + i+1) # [311 312 313]
+        sb.append(length*100 + 10 + i+1)
 
     state_map = map(int, states)
     state_list = list(state_map) #[0 1 1 1]
@@ -166,7 +203,6 @@ def draw_figure_w_toolbar(canvas, fig, canvas_toolbar):
     figure_canvas_agg.draw()
     toolbar = Toolbar(figure_canvas_agg, canvas_toolbar)
     toolbar.update()
-    #figure_canvas_agg.get_tk_widget().pack(side='right', fill='both', expand=1)
     figure_canvas_agg.get_tk_widget().pack(side='right', expand=1)
 
 class Toolbar(NavigationToolbar2Tk):
@@ -175,6 +211,12 @@ class Toolbar(NavigationToolbar2Tk):
 
 
 # ---------------------- DEFINE LAYOUT -------------------------#
+sg.theme('GreenTan')
+
+menu_def = [['File', ['Open', 'Save', 'Exit']],
+            ['Help', ['Support'], ],
+            ['About', 'About...'], ]
+
 options = [[sg.Frame('Choose the eye',
                      [[sg.Checkbox('Left eye', key='Lefteye'),
                        sg.Checkbox('Right eye', key='Righteye')]], border_width=10)],
@@ -274,8 +316,6 @@ layout = [[sg.Menu(menu_def, tearoff=True)],[sg.Column(choices, element_justific
 window = sg.Window('Enlighter', layout, location=(0, 0),size=(1920,1080), font='Helvetica 9', resizable=True)
 
 
-
-
 while True:
     event, values= window.read()
     if event is None or event == 'Exit':
@@ -328,8 +368,6 @@ while True:
         patient_text_output.append('Patient Birthdate:' + str(patient_birthday))
         patient_text_output.append('Electrode type:' + str(electrode_type))
 
-
-
         dicti= evaluate_single_patient(patient_id, os.path.split(path_to_mydata)[0])
 
         classification=''
@@ -361,7 +399,7 @@ while True:
 
         plt.title('ERG recording')
         plt.xlabel('ms')
-        plt.ylabel('mV')
+        plt.ylabel('uV')
         plt.grid()
 
 
@@ -388,7 +426,7 @@ while True:
         if values['D3'] == True:
             if b!=0:
                 plt.subplot(b)
-                plt.ylabel('mV')
+                plt.ylabel('uV')
             if values['Lefteye'] == True:
                 plt.plot(left_dark_3_time, left_dark_3_data, color='green', label='left eye')
             if values['Righteye'] == True:
@@ -399,7 +437,7 @@ while True:
         if values['L3'] == True:
             if c!=0:
                 plt.subplot(c)
-                plt.ylabel('mV')
+                plt.ylabel('uV')
             if values['Lefteye'] == True:
                 plt.plot(left_light_3_time, left_light_3_data, color='green', label='left eye')
             if values['Righteye'] == True:
@@ -411,7 +449,7 @@ while True:
             if d != 0:
                 plt.subplot(d)
                 #plt.xlabel('ms')
-                plt.ylabel('mV')
+                plt.ylabel('uV')
             if values['Lefteye'] == True:
                 plt.plot(left_light_30_time, left_light_30_data, color='green', label='left eye')
             if values['Righteye'] == True:
