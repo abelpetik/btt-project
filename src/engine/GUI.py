@@ -7,9 +7,6 @@ import data_import
 from evaluation import evaluate_single_patient
 from operator import itemgetter
 
-
-
-
 # ---------------------- GLOBAL VARIABLES -------------------------#
 data_file=[]
 
@@ -34,23 +31,23 @@ right_light_3_data = []
 right_light_30_time= []
 right_light_30_data = []
 
-
 #Output header:
 patient_text_output = []
-#Path to the data
+#Path to the ERG data
 path_to_mydata=''
 
 # ---------------------- FUNCTIONS -------------------------#
 
 def sep(time, uv):
     """
-    #Truncation of the time and signal (data) arrays.
+    Truncation of the time and signal (data) arrays.
     The end of each recording is indicated by ms, uV or nan.
 
     Returns
     -------
     Correct length of time and data array
     """
+
     new_w_time=[]
     new_w_data=[]
     for k in range(len(time)):
@@ -66,12 +63,12 @@ def sep(time, uv):
 
 def recordings_seperator(data_file, tested_eye, stim_freq):
     """
-    # Separeting the Reported Waveform into time and signal (data) arrays.
+    # Separeting the Reported Waveform into time and signal (voltage data) arrays.
     Seperation is done by TestedEye and Stimulus Frequency.
 
     Returns
     -------
-    Time and data array
+    Time and data array for each type of ERG recordings
     """
     time=[]
     data=[]
@@ -145,7 +142,7 @@ def get_data(ordered_data_file,k):
 
 def data_reorder(data_file):
     """
-    Reordering data file sorted by Stimulus Frequency
+    Reordering data file sorted by Stimulus Frequency (ascending order)
 
     Returns
     -------
@@ -165,6 +162,25 @@ def data_reorder(data_file):
     new_data= newlist_left + newlist_right
     return new_data
 
+def remove_nan(data_file):
+    """
+    Removes those ERG recordings, where the Stimulus Frequency was 1.0 or 'nan'
+    Parameters
+    ----------
+    data_file
+
+    Returns
+    -------
+    data_file
+    """
+    i = 0
+    k = 0
+    while i < len(data_file):
+        if float(data_file[k]['Stimulus Frequency']) == 1.0 or str(data_file[k]['Stimulus Frequency']) == 'nan':
+            data_file.pop(k)
+        i = i + 1
+        k = k + 1
+    return data_file
 
 def subplotting(states):
     """
@@ -180,7 +196,7 @@ def subplotting(states):
         sb.append(length*100 + 10 + i+1)
 
     state_map = map(int, states)
-    state_list = list(state_map) #[0 1 1 1]
+    state_list = list(state_map)
 
     for i in range(len(state_list)):
         if state_list[i]==1:
@@ -193,6 +209,19 @@ def subplotting(states):
 # ---------------------- MATPLOTLIB FIGURE IN A TKINTER CANVAS + MATPLOTLIB TOOLBAR -------------------------#
 
 def draw_figure_w_toolbar(canvas, fig, canvas_toolbar):
+    """
+    Creates the canvas and the navigation toolbar
+
+    Parameters
+    ----------
+    canvas
+    fig
+    canvas_toolbar
+
+    Returns
+    -------
+    None
+    """
     if canvas.children:
         for child in canvas.winfo_children():
             child.destroy()
@@ -211,6 +240,11 @@ class Toolbar(NavigationToolbar2Tk):
 
 
 # ---------------------- DEFINE LAYOUT -------------------------#
+"""
+Defining the layout elements 
+"""
+
+
 sg.theme('GreenTan')
 
 menu_def = [['File', ['Open', 'Save', 'Exit']],
@@ -280,41 +314,24 @@ choices = [[sg.Text('Data:')],
                     alternating_row_color='lightyellow',
                     row_height=35,num_rows=3, key='-TABLE-', enable_events=True)],
             [sg.Frame('Select recording', layout=options)],
-            [sg.Frame('Select recording', layout=label_data)],
-           ]
+            [sg.Frame('Select recording', layout=label_data)],]
 
 items_chosen = [
         [sg.Canvas(key='-CANVAS-', size=(600,600))],
         [sg.Push(),sg.Button('Ok'), sg.Button('Exit')],
-        [sg.Text("", size=(50, 3), key='options')],
-                ]
+        [sg.Text("", size=(50, 3), key='options')],]
 
 plot_test=[
         [sg.B('Plot'), sg.B('Clear plot', key='Clear'), sg.B('Exit') ],
         [sg.T('Controls:')],
         [sg.Canvas(key='controls_cv')],
         [sg.T('Figure:')],
-
-        [sg.Column(
-        layout=[
-            [sg.Canvas(key='fig_cv',
-                       # it's important that you set this size
-                       size=(400 *2, 400*1.1)
-                       )]
-        ],
-        background_color='#DAE0E6',
-        pad=(0, 0) )
-           ],
-
-        [sg.MLine(default_text=f'Automated classification:\n', size=(110, 6), auto_refresh=True, key='query')],
-
-        ]
-
-
+        [sg.Column(layout=[
+        [sg.Canvas(key='fig_cv',size=(400 *2, 400*1.1) )]],background_color='#DAE0E6',pad=(0, 0))],
+        [sg.MLine(default_text=f'Automated classification:\n', size=(110, 6), auto_refresh=True, key='query')],]
 
 layout = [[sg.Menu(menu_def, tearoff=True)],[sg.Column(choices, element_justification='u'), sg.Column(plot_test,  element_justification='u')]]
 window = sg.Window('Enlighter', layout, location=(0, 0),size=(1920,1080), font='Helvetica 9', resizable=True)
-
 
 while True:
     event, values= window.read()
@@ -322,7 +339,7 @@ while True:
         break
 
     if event == 'About...':
-        sg.popup('Enlighter', 'Version 1.0', 'The enlighter development team was formed earlier this year to help '
+        sg.popup('Enlighter', 'Version 1.0', 'The Enlighter development team was formed earlier this year to help '
                                              'detect patients with retinal disorders and thus support the early treatment of those suffering from this common disease')
 
     if event == 'Support':
@@ -335,24 +352,24 @@ while True:
         window['query'].update('Automated classification:\n')
         patient_text_output.clear()
 
-
+        #Importing the data with the importer
         data_file, path_to_mydata =data_import.importer(return_path=True)
-        i = 0
-        k=0
-        while i < len(data_file):
-            if float(data_file[k]['Stimulus Frequency']) == 1.0 or str(data_file[k]['Stimulus Frequency']) == 'nan':
-                data_file.pop(k)
-            i = i + 1
-            k=k+1
+        data_file=remove_nan(data_file)
 
+        #Updating table with data
         patient_id=data_file[0]['PatientID']
         patient_birthday = data_file[0]['PatientBirthdate']
         electrode_type = sensortype(data_file)
 
-
         patient_data = [['Patient ID', patient_id], ['Patients birthday', patient_birthday], ['Electrode type', electrode_type]]
         window['-TABLE-'].update(patient_data)
 
+        #Creating header string for the output text file
+        patient_text_output.append('Patient ID:' + str(patient_id))
+        patient_text_output.append('Patient Birthdate:' + str(patient_birthday))
+        patient_text_output.append('Electrode type:' + str(electrode_type))
+
+        #Seperating the ERG recordings by TestedEye and Stimulus Frequency.
         left_dark_001_time,left_dark_001_data= recordings_seperator(data_file, 'LeftEye' , [0.49, 0.5])
         left_dark_3_time, left_dark_3_data= recordings_seperator(data_file, 'LeftEye', [0.09, 1])
         left_light_3_time, left_light_3_data=recordings_seperator(data_file,'LeftEye', [1.9, 2.0])
@@ -363,15 +380,9 @@ while True:
         right_light_3_time, right_light_3_data = recordings_seperator(data_file, 'RightEye', [1.9, 2.0])
         right_light_30_time, right_light_30_data = recordings_seperator(data_file, 'RightEye', [27.0, 35.0])
 
-
-        patient_text_output.append('Patient ID:' + str(patient_id))
-        patient_text_output.append('Patient Birthdate:' + str(patient_birthday))
-        patient_text_output.append('Electrode type:' + str(electrode_type))
-
+        #Using the result of the automated evaluation
         dicti= evaluate_single_patient(patient_id, os.path.split(path_to_mydata)[0])
-
         classification=''
-
         for protocol in dicti[electrode_type].keys():
             for eye in dicti[electrode_type][protocol].keys():
                 if dicti[electrode_type][protocol][eye] > 4:
@@ -382,12 +393,10 @@ while True:
                     verdict = 'good'
                 classification += f'\n{protocol}, {eye}: {verdict}'
 
-        print(classification)
-
+        #Updating the comment section with the result of the automated evaluation
         if len(classification)> 0:
-            window['query'].update(f'Automated classification\n ------------------------------- {classification} \n-------------------------------')
-
-
+            window['query'].update(f'Automated classification\n '
+                                   f'------------------------------- {classification} \n-------------------------------')
 
     if event == 'Plot':
         # -------------------------------  MATPLOTLIB CODE --------------------------
@@ -396,23 +405,19 @@ while True:
         fig.clf()
         DPI = fig.get_dpi()
         fig.set_size_inches(404*2 / float(DPI), 404*1.1/ float(DPI))
-
         plt.title('ERG recording')
         plt.xlabel('ms')
         plt.ylabel('uV')
         plt.grid()
-
-
         # -------------------------------SUBPLOTTING-------------------------------
 
         states = [values['D001'], values['D3'], values['L3'], values['L30']]
-        a = subplotting(states)[0] # e.g. [311 312 313]
+        a = subplotting(states)[0]
         b = subplotting(states)[1]
         c = subplotting(states)[2]
         d = subplotting(states)[3]
         # -------------------------------Plotting the data-------------------------------
-
-        if values['D001'] == True: #and values['Left eye'] == True:
+        if values['D001'] == True:
             if a!=0:
                 plt.subplot(a)
                 plt.ylabel('mV')
@@ -455,14 +460,9 @@ while True:
             if values['Righteye'] == True:
                 plt.plot(right_light_30_time, right_light_30_data, color='grey', label='right eye')
             plt.legend()
-
             plt.title('Light 30')
 
         plt.xlabel('ms')
-
-        #if values['D001'] == False and values['D3'] == False and values['L3'] == False and values['L30'] == False:
-        #   plt.clf()
-
     # ------------------------------- Instead of plt.show()
         draw_figure_w_toolbar(window['fig_cv'].TKCanvas, fig, window['controls_cv'].TKCanvas)
 
@@ -486,22 +486,21 @@ while True:
         fig = plt.gcf()
         DPI = fig.get_dpi()
         fig.set_size_inches(404*2/ float(DPI), 404*1.1/ float(DPI))
-
         plt.title('ERG recording')
         plt.xlabel('ms')
         plt.ylabel('mV')
         plt.grid()
-
         draw_figure_w_toolbar(window['fig_cv'].TKCanvas, fig, window['controls_cv'].TKCanvas)
-
 
     if event =='Save':
         labelled_data=""
         ordered_data_file = data_reorder(data_file)
         ordered_data_file = labelling(ordered_data_file)
 
+        #Reading the comment section
         query = values['query'].rstrip()
 
+        #Creating the output text file
         outfile= os.path.splitext(path_to_mydata)[0]+'.txt'
         print(outfile)
         with open(outfile, 'w') as outputfile:
@@ -519,7 +518,5 @@ while True:
             outputfile.write(query + '\n')
 
         data_import.save(os.path.splitext(path_to_mydata)[0]+'.pkl', ordered_data_file )
-
-
 
 window.close()
